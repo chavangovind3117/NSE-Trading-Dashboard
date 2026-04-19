@@ -315,20 +315,26 @@ def summarize_sentiment():
     save_sentiment(pcr, vix, vix_sma20, vix_delta_pct,
                    advancers, decliners, breadth_ratio, signal, note)
 
+    # Check if signal has changed since last update
+    history = load_sentiment_history(1)
+    last_signal = history["signal"].iloc[0] if not history.empty else None
+
     analysis = sentiment_ai_summary(pcr, vix, vix_delta_pct,
                                     breadth_ratio, advancers, decliners,
                                     signal, note)
 
-    send_telegram(
-        f"<b>📡 Market Sentiment Update</b>\n"
-        f"PCR: {pcr if pcr is not None else 'N/A'}\n"
-        f"India VIX: {vix if vix is not None else 'N/A'} "
-        f"({f'{vix_delta_pct:+.2f}% vs 20d' if vix_delta_pct is not None else 'N/A'})\n"
-        f"Breadth: {breadth_ratio if breadth_ratio is not None else 'N/A'}\n"
-        f"Advancers / Decliners: {advancers if advancers is not None else 'N/A'} / {decliners if decliners is not None else 'N/A'}\n"
-        f"Signal: {signal}\n"
-        f"{note}\n"
-    )
+    # Only send Telegram update if signal changed and we have sufficient data
+    if signal != last_signal and signal != "INSUFFICIENT DATA":
+        send_telegram(
+            f"<b>📡 Market Sentiment Update</b>\n"
+            f"PCR: {pcr if pcr is not None else 'N/A'}\n"
+            f"India VIX: {vix if vix is not None else 'N/A'} "
+            f"({f'{vix_delta_pct:+.2f}% vs 20d' if vix_delta_pct is not None else 'N/A'})\n"
+            f"Breadth: {breadth_ratio if breadth_ratio is not None else 'N/A'}\n"
+            f"Advancers / Decliners: {advancers if advancers is not None else 'N/A'} / {decliners if decliners is not None else 'N/A'}\n"
+            f"Signal: {signal}\n"
+            f"{note}\n"
+        )
 
     return {
         "pcr": pcr,
