@@ -22,6 +22,20 @@ from config import TELEGRAM_TOKEN, CHAT_ID, GROQ_API_KEY, GROQ_MODEL
 IST            = pytz.timezone("Asia/Kolkata")
 DB_PATH        = "nse_trading.db"
 
+def send_telegram(text: str):
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        return
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    try:
+        requests.post(url, json=payload, timeout=15)
+    except Exception:
+        pass
+
 WATCHLIST = {
     "Reliance":"RELIANCE.NS","TCS":"TCS.NS","HDFC Bank":"HDFCBANK.NS",
     "Infosys":"INFY.NS","ICICI Bank":"ICICIBANK.NS","SBI":"SBIN.NS",
@@ -546,7 +560,12 @@ def render_smart_money_tab():
             c1.metric("FII 3-day", f"₹{hist.head(3)['fii_net'].sum():+,.0f} Cr")
             c2.metric("DII 3-day", f"₹{hist.head(3)['dii_net'].sum():+,.0f} Cr")
             streak = sum(1 for _,r in hist.iterrows() if r["fii_net"]>200)
-            if streak>=3: st.success(f"⚡ DIVERGENCE ACTIVE — FII buying {streak} consecutive days")
+            if streak>=3: 
+                st.success(f"⚡ DIVERGENCE ACTIVE — FII buying {streak} consecutive days")
+                # Send notification if not already sent in this session
+                if not st.session_state.get("fii_divergence_notified", False):
+                    send_telegram(f"🏦 FII/DII Divergence Alert\nFII buying streak: {streak} days\n3-day FII net: ₹{hist.head(3)['fii_net'].sum():+,.0f} Cr\nPattern: {hist.iloc[0]['divergence']}")
+                    st.session_state["fii_divergence_notified"] = True
         else:
             st.info("No FII/DII data available. Click below to fetch latest data.")
             if st.button("Fetch FII/DII Data", key="fetch_fii_dii"):
