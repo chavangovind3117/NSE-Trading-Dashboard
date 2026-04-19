@@ -186,6 +186,8 @@ if SENTIMENT_OK:
     init_sentiment_db()
 if TIME_STRATEGIES_OK:
     init_time_db()
+if SMART_OK:
+    init_smart_db()
 
 # ── Data fetching ─────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)

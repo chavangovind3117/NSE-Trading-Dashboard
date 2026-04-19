@@ -107,9 +107,14 @@ def save_fii_dii(date, fb, fs, fn, db, ds, dn):
     conn.commit(); conn.close()
 
 def load_fii_dii(days=10):
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query("SELECT * FROM fii_dii_data ORDER BY date DESC LIMIT ?", conn, params=(days,))
-    conn.close(); return df
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql_query("SELECT * FROM fii_dii_data ORDER BY date DESC LIMIT ?", conn, params=(days,))
+        conn.close()
+        return df
+    except Exception:
+        # If table doesn't exist or error, return empty DataFrame
+        return pd.DataFrame(columns=['id', 'date', 'fii_buy', 'fii_sell', 'fii_net', 'dii_buy', 'dii_sell', 'dii_net', 'divergence'])
 
 def save_bulk(date, sym, co, client, bs, qty, price):
     conn = sqlite3.connect(DB_PATH)
