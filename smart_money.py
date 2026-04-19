@@ -548,8 +548,17 @@ def render_smart_money_tab():
             streak = sum(1 for _,r in hist.iterrows() if r["fii_net"]>200)
             if streak>=3: st.success(f"⚡ DIVERGENCE ACTIVE — FII buying {streak} consecutive days")
         else:
-            st.info("No data yet. Run: python smart_money.py → choose option 2")
-            st.code("python smart_money.py")
+            st.info("No FII/DII data available. Click below to fetch latest data.")
+            if st.button("Fetch FII/DII Data", key="fetch_fii_dii"):
+                with st.spinner("Fetching data..."):
+                    data = fetch_fii_dii()
+                    if data:
+                        save_fii_dii(data["date"], data["fii_buy"], data["fii_sell"], data["fii_net"],
+                                     data["dii_buy"], data["dii_sell"], data["dii_net"])
+                        st.success("Data fetched and saved! Refresh the page to see it.")
+                        st.rerun()
+                    else:
+                        st.error("Failed to fetch data. Try again later.")
 
     with t2:
         st.markdown("**Recent institutional bulk deals**")
