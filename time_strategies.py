@@ -46,6 +46,20 @@ from config import TELEGRAM_TOKEN, CHAT_ID, GROQ_API_KEY, GROQ_MODEL
 IST     = pytz.timezone("Asia/Kolkata")
 DB_PATH = "nse_trading.db"
 
+def send_telegram(text: str):
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        return
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    try:
+        requests.post(url, json=payload, timeout=15)
+    except Exception:
+        pass
+
 # Stocks for ORB — large caps with high liquidity only
 ORB_WATCHLIST = {
     "NIFTY 50":      "^NSEI",
@@ -860,6 +874,15 @@ def render_time_strategies_tab():
                              "breakout","break_price","target_1","stop_loss"]].copy()
                 st.dataframe(disp.style.apply(color_orb, axis=1),
                              use_container_width=True, hide_index=True)
+                
+                # Send notification for active breakouts
+                active_breakouts = orb[orb["breakout"].isin(["BULLISH", "BEARISH"])]
+                if not active_breakouts.empty and not st.session_state.get("orb_notified", False):
+                    msg = "⏰ ORB Breakout Alert\n"
+                    for _, row in active_breakouts.iterrows():
+                        msg += f"{row['stock']}: {row['breakout']} breakout at {row['break_price']:.2f}, Target: {row['target_1']:.2f}, Stop: {row['stop_loss']:.2f}\n"
+                    send_telegram(msg)
+                    st.session_state["orb_notified"] = True
             else:
                 st.info("No ORB data today. ORB captures at 9:30 AM on weekdays.")
                 st.caption("Run time_strategies.py → option 2 to start scheduler")
@@ -911,6 +934,14 @@ def render_time_strategies_tab():
                     return [""] * len(row)
                 st.dataframe(eb.style.apply(color_eb, axis=1),
                              use_container_width=True, hide_index=True)
+                
+                # Send notification for recent bias
+                latest = eb.iloc[0] if not eb.empty else None
+                if latest is not None and not st.session_state.get("expiry_bias_notified", False):
+                    bias = latest["bias"]
+                    if "BULLISH" in bias or "BEARISH" in bias:
+                        send_telegram(f"📅 Expiry Week Bias Alert\nExpiry: {latest['expiry_date']}\nMax Pain: {latest['max_pain']}\nBias: {bias}\nNIFTY Close: {latest['nifty_close']}")
+                        st.session_state["expiry_bias_notified"] = True
             else:
                 st.info("No expiry bias reports yet. Runs every Monday at 9 AM.")
         except Exception:
