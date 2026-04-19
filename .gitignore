@@ -1,0 +1,15 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Local environment and secrets
+.env
+secrets.toml
+
+# Local database
+nse_trading.db
+
+# Streamlit local config
+.streamlit/
